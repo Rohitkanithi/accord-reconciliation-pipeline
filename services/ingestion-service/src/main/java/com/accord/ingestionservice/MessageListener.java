@@ -1,4 +1,4 @@
-package com.accord.ingestionservice;
+package com.accord.ingestionservice; // Or your package name
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.sqs.annotation.SqsListener;
@@ -6,47 +6,66 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+
+import java.net.URLDecoder; // <-- NEW IMPORT
+import java.nio.charset.StandardCharsets; // <-- NEW IMPORT
 
 @Component
-public class MessageListener {
+public class MessageListener { // Or SqsListener
 
     private static final Logger logger = LoggerFactory.getLogger(MessageListener.class);
 
-    // Spring Boot automatically configures and provides an ObjectMapper bean for us to use.
     private final ObjectMapper objectMapper;
+    private final S3Client s3Client;
 
-    // We use constructor injection to get the ObjectMapper bean. This is a best practice.
-    public MessageListener(ObjectMapper objectMapper) {
+    public MessageListener(ObjectMapper objectMapper, S3Client s3Client) {
         this.objectMapper = objectMapper;
+        this.s3Client = s3Client;
     }
 
     @SqsListener("${spring.cloud.aws.sqs.queue-name}")
     public void receiveMessage(Message<String> message) {
-        String payload = message.getPayload();
         logger.info("====================================================");
-        logger.info("SUCCESS: Received a new message from SQS!");
-        logger.info("Raw Payload: {}", payload);
+        logger.info("Received S3 event notification via SQS!");
+        logger.info("Raw Payload: {}", message.getPayload());
 
         try {
-            // Use the ObjectMapper to parse the JSON string into our S3Event object
-            S3Event s3Event = objectMapper.readValue(payload, S3Event.class);
+            S3Event s3Event = objectMapper.readValue(message.getPayload(), S3Event.class);
 
             if (s3Event.records() != null && !s3Event.records().isEmpty()) {
-                // S3 can sometimes send multiple records, but we'll process the first one.
                 S3EventRecord record = s3Event.records().get(0);
                 String bucketName = record.s3().bucket().name();
-                String objectKey = record.s3().object().key();
 
-                logger.info("-----> Extracted Bucket Name: {}", bucketName);
-                logger.info("-----> Extracted File Key (Name): {}", objectKey);
+                // --- THE FIX IS HERE ---
+                // 1. Get the URL-encoded key from the event.
+                String encodedObjectKey = record.s3().object().key();
+                // 2. Decode the key to handle special characters like spaces ('+').
+                String objectKey = URLDecoder.decode(encodedObjectKey, StandardCharsets.UTF_8);
+                // --- END OF FIX ---
 
-                // OUR NEXT STEP WILL GO HERE:
-                // Use the bucketName and objectKey to download the file from S3.
+                logger.info("-----> Extracted Bucket: {}", bucketName);
+                logger.info("-----> Extracted and DECODED File Key: {}", objectKey); // Use the new decoded key
+
+                logger.info("-----> Attempting to download file from S3...");
+                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(objectKey) // Use the decoded key
+                        .build();
+
+                ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest);
+                long fileSize = s3Object.response().contentLength();
+
+                logger.info("-----> SUCCESS: File downloaded successfully! Size: {} bytes", fileSize);
+
+                s3Object.close();
             }
         } catch (Exception e) {
-            logger.error("Failed to parse S3 event JSON", e);
+            logger.error("Failed to process S3 event or download file", e);
         }
-
         logger.info("====================================================");
     }
 }
