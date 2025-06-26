@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder; // NEW IMPORT
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -47,8 +47,10 @@ public class MessageListener {
             S3EventRecord record = s3Event.records().get(0);
             String bucketName = record.s3().bucket().name();
             String objectKey = URLDecoder.decode(record.s3().object().key(), StandardCharsets.UTF_8);
+
             logger.info("-----> Processing file: s3://{}/{}", bucketName, objectKey);
             processPdfAndPublishEvent(bucketName, objectKey);
+
         } catch (Exception e) {
             logger.error("Failed to process message", e);
         }
@@ -73,8 +75,8 @@ public class MessageListener {
 
             var eventToPublish = new TransactionProcessedEvent(bucketName, objectKey, fileSize, pageCount, textSnippet);
 
-            // Correctly build a standard Spring Message and use the .send() method
-            Message<TransactionProcessedEvent> snsMessage = MessageBuilder.withPayload(eventToPublish).build();
+            String jsonPayload = objectMapper.writeValueAsString(eventToPublish);
+            Message<String> snsMessage = MessageBuilder.withPayload(jsonPayload).build();
             snsTemplate.send(topicArn, snsMessage);
 
             logger.info("-----> SUCCESS: Published TransactionProcessedEvent to SNS topic!");
