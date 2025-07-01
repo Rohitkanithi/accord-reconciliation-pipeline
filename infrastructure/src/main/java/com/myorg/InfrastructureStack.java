@@ -1,5 +1,10 @@
 package com.myorg;
 
+import software.amazon.awscdk.services.ec2.*;
+import software.amazon.awscdk.services.elasticache.CfnSubnetGroup;
+import software.amazon.awscdk.services.elasticache.CfnCacheCluster;
+import java.util.List;
+import java.util.stream.Collectors;
 import software.amazon.awscdk.RemovalPolicy;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
@@ -16,6 +21,16 @@ public class InfrastructureStack extends Stack {
     public InfrastructureStack(final Construct scope, final String id, final StackProps props) {
         super(scope, id, props);
 
+        // --- A VPC for our services that need networking, like Redis ---
+        Vpc vpc = Vpc.Builder.create(this, "AccordVPC")
+                .maxAzs(2) // Use 2 Availability Zones for high availability
+                .subnetConfiguration(List.of(
+                        SubnetConfiguration.builder()
+                                .name("private-isolated")
+                                .subnetType(SubnetType.PRIVATE_ISOLATED)
+                                .build()
+                ))
+                .build();
 
         Queue intakeQueue = Queue.Builder.create(this, "AccordIntakeQueue")
                 .queueName("accord-intake-queue")
@@ -60,6 +75,52 @@ public class InfrastructureStack extends Stack {
         StringParameter.Builder.create(this, "VerificationQueueUrlParameter")
                 .parameterName("/accord/queues/verification-queue-url")
                 .stringValue(verificationQueue.getQueueUrl())
+                .build();
+
+        // --- ElastiCache for Redis Cluster ---
+        List<String> subnetIds = vpc.getIsolatedSubnets().stream().map(ISubnet::getSubnetId).collect(Collectors.toList());
+
+        CfnSubnetGroup redisSubnetGroup = CfnSubnetGroup.Builder.create(this, "RedisSubnetGroup")
+                .description("Subnet group for Redis")
+                .subnetIds(subnetIds)
+                .build();
+
+        SecurityGroup redisSecurityGroup = SecurityGroup.Builder.create(this, "RedisSecurityGroup")
+                .vpc(vpc)
+                .description("Security group for Redis")
+                .allowAllOutbound(true)
+                .build();
+        // NOTE: This rule allows any resource within the VPC to connect.
+        redisSecurityGroup.addIngressRule(Peer.ipv4(vpc.getVpcCidrBlock()), Port.tcp(6379), "Allow Redis connections from within VPC");
+
+        CfnCacheCluster redisCluster = CfnCacheCluster.Builder.create(this, "AccordRedisCluster")
+                .cacheNodeType("cache.t2.micro")
+                .engine("redis")
+                .numCacheNodes(1)
+                .vpcSecurityGroupIds(List.of(redisSecurityGroup.getSecurityGroupId()))
+                .cacheSubnetGroupName(redisSubnetGroup.getRef())
+                .build();
+
+        // --- SQS Queue for the FraudDetectionService ---
+        Queue fraudDetectionQueue = Queue.Builder.create(this, "FraudDetectionQueue")
+                .queueName("fraud-detection-queue")
+                .build();
+        transactionReceivedTopic.addSubscription(new SqsSubscription(fraudDetectionQueue));
+
+        // --- SSM Parameters for Redis and the new queue ---
+        StringParameter.Builder.create(this, "FraudDetectionQueueUrlParameter")
+                .parameterName("/accord/queues/fraud-detection-queue-url")
+                .stringValue(fraudDetectionQueue.getQueueUrl())
+                .build();
+
+        StringParameter.Builder.create(this, "RedisAddress")
+                .parameterName("/accord/redis/address")
+                .stringValue(redisCluster.getAttrRedisEndpointAddress())
+                .build();
+
+        StringParameter.Builder.create(this, "RedisPort")
+                .parameterName("/accord/redis/port")
+                .stringValue(redisCluster.getAttrRedisEndpointPort())
                 .build();
     }
 }

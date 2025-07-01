@@ -5,8 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cbc3a04a-1a79-4499-9853-9b4c3268b4b9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/services/fraud-detection-service/src/main/java/com/accord/fraud_detection_service/FraudListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/services/fraud-detection-service/src/main/java/com/accord/fraud_detection_service/RedisConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/services/fraud-detection-service/src/main/java/com/accord/fraud_detection_service/TransactionProcessedEvent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/accord-reconciliation-pipeline.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/accord-reconciliation-pipeline.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/verification-service/src/main/java/com/accord/verificationservice/VerificationListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/verification-service/src/main/java/com/accord/verificationservice/VerificationListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/infrastructure/src/main/java/com/myorg/InfrastructureStack.java" beforeDir="false" afterPath="$PROJECT_DIR$/infrastructure/src/main/java/com/myorg/InfrastructureStack.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,16 +42,30 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.FraudDetectionServiceApplication.executor": "Run",
     "Application.IngestionServiceApplication.executor": "Run",
     "Application.VerificationServiceApplication.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "feat/create-verification-service"
+    "git-widget-placeholder": "feat/infra-fraud-service"
   }
 }]]></component>
-  <component name="RunManager" selected="Application.VerificationServiceApplication">
+  <component name="RunManager" selected="Application.IngestionServiceApplication">
+    <configuration name="FraudDetectionServiceApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.accord.fraud_detection_service.FraudDetectionServiceApplication" />
+      <module name="fraud-detection-service" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.accord.fraud_detection_service.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="IngestionServiceApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.accord.ingestionservice.IngestionServiceApplication" />
       <module name="ingestion-service" />
@@ -72,8 +94,9 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.VerificationServiceApplication" />
         <item itemvalue="Application.IngestionServiceApplication" />
+        <item itemvalue="Application.VerificationServiceApplication" />
+        <item itemvalue="Application.FraudDetectionServiceApplication" />
       </list>
     </recent_temporary>
   </component>
