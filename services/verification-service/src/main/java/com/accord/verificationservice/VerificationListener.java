@@ -13,33 +13,30 @@ public class VerificationListener {
     private static final Logger logger = LoggerFactory.getLogger(VerificationListener.class);
     private final ObjectMapper objectMapper;
 
-    // We only need the ObjectMapper now
     public VerificationListener(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
-    // The message from an SNS->SQS subscription is a JSON string containing the SNS notification
+    // We listen for the raw JSON String from the SQS queue
     @SqsListener("${spring.cloud.aws.sqs.queue-name}")
     public void receiveMessage(String snsMessageJson) {
         logger.info("====================================================");
-        logger.info("VERIFICATION SERVICE Received new message!");
+        logger.info("VERIFICATION SERVICE: Received new message from queue!");
         try {
-            // 1. Parse the outer SNS/SQS message structure
+            // Step 1: Parse the outer SNS envelope to get to the 'Message' field
             JsonNode rootNode = objectMapper.readTree(snsMessageJson);
-
-            // 2. Extract the actual 'Message' payload, which is the JSON of our event
             String eventPayload = rootNode.get("Message").asText();
 
-            // 3. Parse the inner JSON into our event object
+            // Step 2: Parse the actual message payload into our event object
             TransactionProcessedEvent event = objectMapper.readValue(eventPayload, TransactionProcessedEvent.class);
 
             logger.info("-----> Event parsed successfully for file: {}", event.fileKey());
-            logger.info("-----> Verifying details for transaction involving {}...", event.fileKey());
+            logger.info("-----> Verifying details...");
             Thread.sleep(1500); // Simulate work
-            logger.info("-----> SUCCESS: Details for {} are VERIFIED.", event.fileKey());
+            logger.info("-----> SUCCESS: Details for {} VERIFIED.", event.fileKey());
 
         } catch (Exception e) {
-            logger.error("Error processing event in VerificationService", e);
+            logger.error("Error parsing SNS message or processing event", e);
         }
         logger.info("====================================================");
     }
